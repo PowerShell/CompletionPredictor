@@ -21,6 +21,16 @@ public class CompletionPredictor : ICommandPredictor, IDisposable
         "Microsoft.WSMan.Management"
     };
 
+    private static HashSet<string> s_cmdList = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "%",
+        "foreach",
+        "ForEach-Object",
+        "?",
+        "where",
+        "Where-Object"
+    };
+
     internal CompletionPredictor(string guid)
     {
         _guid = new Guid(guid);
@@ -96,11 +106,25 @@ public class CompletionPredictor : ICommandPredictor, IDisposable
     public SuggestionPackage GetSuggestion(PredictionClient client, PredictionContext context, CancellationToken cancellationToken)
     {
         Token tokenAtCursor = context.TokenAtCursor;
-        if (tokenAtCursor is null || tokenAtCursor.TokenFlags.HasFlag(TokenFlags.CommandName))
+        IReadOnlyList<Ast> relatedAsts = context.RelatedAsts;
+
+        if (tokenAtCursor is null)
         {
-            // - When it ends at a white space, it would likely trigger argument completion which in most cases would be file operation intensive.
-            //   That's not only slow, but also undesirable in most cases, so we proceed only if the input ends at a token.
-            // - When it's a command, it would likely take too much time because the command discovery is usually expensive, so we skip it.
+            // When it ends at a white space, it would likely trigger argument completion which in most cases would be file-operation
+            // intensive. That's not only slow but also undesirable in most cases, so we skip it.
+            // But, there are exceptions for 'ForEach-Object' and 'Where-Object', where completion on member names is quite useful.
+            Ast lastAst = relatedAsts[^1];
+            var cmdName = (lastAst.Parent as CommandAst)?.CommandElements[0] as StringConstantExpressionAst;
+            if (cmdName is null || !s_cmdList.Contains(cmdName.Value) || !object.ReferenceEquals(lastAst, cmdName))
+            {
+                // So we stop processing unless the cursor is right after 'ForEach-Object' or 'Where-Object'.
+                return default;
+            }
+        }
+
+        if (tokenAtCursor is not null && tokenAtCursor.TokenFlags.HasFlag(TokenFlags.CommandName))
+        {
+            // When it's a command, it would likely take too much time because the command discovery is usually expensive, so we skip it.
             return default;
         }
 
