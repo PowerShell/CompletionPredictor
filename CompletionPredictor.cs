@@ -1,26 +1,9 @@
-﻿using System.Management.Automation;
+using System.Management.Automation;
 using System.Management.Automation.Language;
 using System.Management.Automation.Runspaces;
-using System.Management.Automation.Subsystem;
 using System.Management.Automation.Subsystem.Prediction;
 
 namespace ps.predictor;
-
-public class Init : IModuleAssemblyInitializer, IModuleAssemblyCleanup
-{
-    private const string Id = "77bb0bd8-2d8b-4210-ad14-79fb91a75eab";
-
-    public void OnImport()
-    {
-        var predictor = new CompletionPredictor(Id);
-        SubsystemManager.RegisterSubsystem<ICommandPredictor, CompletionPredictor>(predictor);
-    }
-
-    public void OnRemove(PSModuleInfo psModuleInfo)
-    {
-        SubsystemManager.UnregisterSubsystem<ICommandPredictor>(new Guid(Id));
-    }
-}
 
 public class CompletionPredictor : ICommandPredictor, IDisposable
 {
@@ -184,7 +167,7 @@ public class CompletionPredictor : ICommandPredictor, IDisposable
         RemoveActionCallback();
     }
 
-    #region "Unused interface members"
+    #region "Unused interface members because we don't process feedback"
 
     public bool CanAcceptFeedback(PredictionClient client, PredictorFeedbackKind feedback) => false;
     public void OnSuggestionDisplayed(PredictionClient client, uint session, int countOrIndex) { }
