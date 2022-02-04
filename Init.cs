@@ -2,7 +2,7 @@
 using System.Management.Automation.Subsystem;
 using System.Management.Automation.Subsystem.Prediction;
 
-namespace ps.predictor;
+namespace Microsoft.PowerShell.Predictor;
 
 public class Init : IModuleAssemblyInitializer, IModuleAssemblyCleanup
 {

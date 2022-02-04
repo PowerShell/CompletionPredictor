@@ -3,7 +3,7 @@ using System.Management.Automation.Language;
 using System.Management.Automation.Runspaces;
 using System.Management.Automation.Subsystem.Prediction;
 
-namespace ps.predictor;
+namespace Microsoft.PowerShell.Predictor;
 
 public class CompletionPredictor : ICommandPredictor, IDisposable
 {
