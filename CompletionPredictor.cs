@@ -167,7 +167,7 @@ public class CompletionPredictor : ICommandPredictor, IDisposable
         RemoveActionCallback();
     }
 
-    #region "Unused interface members because we don't process feedback"
+    #region "Unused interface members because this predictor doesn't process feedback"
 
     public bool CanAcceptFeedback(PredictionClient client, PredictorFeedbackKind feedback) => false;
     public void OnSuggestionDisplayed(PredictionClient client, uint session, int countOrIndex) { }
