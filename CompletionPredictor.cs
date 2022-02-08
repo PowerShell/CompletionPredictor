@@ -1,9 +1,10 @@
-using System.Management.Automation;
 using System.Management.Automation.Language;
 using System.Management.Automation.Runspaces;
 using System.Management.Automation.Subsystem.Prediction;
 
 namespace Microsoft.PowerShell.Predictor;
+
+using System.Management.Automation;
 
 public class CompletionPredictor : ICommandPredictor, IDisposable
 {
