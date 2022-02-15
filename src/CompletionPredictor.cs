@@ -6,21 +6,11 @@ namespace Microsoft.PowerShell.Predictor;
 
 using System.Management.Automation;
 
-public class CompletionPredictor : ICommandPredictor, IDisposable
+public partial class CompletionPredictor : ICommandPredictor, IDisposable
 {
     private readonly Guid _guid;
     private readonly Runspace _runspace;
-    private int _lock;
-
-    private static HashSet<string> s_snapins = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Microsoft.PowerShell.Diagnostics",
-        "Microsoft.PowerShell.Host",
-        "Microsoft.PowerShell.Utility",
-        "Microsoft.PowerShell.Management",
-        "Microsoft.PowerShell.Security",
-        "Microsoft.WSMan.Management"
-    };
+    private int _lock = 1;
 
     private static HashSet<string> s_cmdList = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -38,66 +28,8 @@ public class CompletionPredictor : ICommandPredictor, IDisposable
         _runspace = RunspaceFactory.CreateRunspace(InitialSessionState.CreateDefault());
         _runspace.Open();
 
-        _lock = 1;
-        AddActionCallback();
-    }
-
-    private void LocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        _runspace.SessionStateProxy.Path.SetLocation(e.NewPath.Path);
-    }
-
-    private void CommandFoundAction(object? sender, CommandLookupEventArgs e)
-    {
-        PSModuleInfo module = e.Command.Module;
-        if (module is not null && !s_snapins.Contains(module.Name))
-        {
-            _runspace.SessionStateProxy.InvokeCommand.InvokeScript($"Import-Module {module.Path}");
-        }
-    }
-
-    /// <summary>
-    /// Add callbacks for 'LocationChangedAction' and 'PostCommandLookupAction'.
-    /// </summary>
-    private void AddActionCallback()
-    {
-        SessionState? ss = GetShellDefaultSessionState();
-        if (ss is null)
-        {
-            return;
-        }
-
-        ss.InvokeCommand.LocationChangedAction += LocationChanged;
-        ss.InvokeCommand.PostCommandLookupAction += CommandFoundAction;
-    }
-
-    /// <summary>
-    /// Remove the callbacks.
-    /// </summary>
-    private void RemoveActionCallback()
-    {
-        SessionState? ss = GetShellDefaultSessionState();
-        if (ss is null)
-        {
-            return;
-        }
-
-        ss.InvokeCommand.LocationChangedAction -= LocationChanged;
-        ss.InvokeCommand.PostCommandLookupAction -= CommandFoundAction;
-    }
-
-    private static SessionState? GetShellDefaultSessionState()
-    {
-        Runspace rs = Runspace.DefaultRunspace;
-        if (rs is null || rs.Id != 1)
-        {
-            // Do nothing when default runspace doesn't exist, or it's not the shell default runspace.
-            return null;
-        }
-
-        using var ps = PowerShell.Create(RunspaceMode.CurrentRunspace);
-        var result = ps.AddScript("$ExecutionContext.SessionState").Invoke<SessionState>();
-        return result.FirstOrDefault();
+        PopulateInitialState();
+        RegisterEvents();
     }
 
     public Guid Id => _guid;
@@ -189,7 +121,8 @@ public class CompletionPredictor : ICommandPredictor, IDisposable
     /// </summary>
     public void Dispose()
     {
-        RemoveActionCallback();
+        UnregisterEvents();
+        _runspace.Dispose();
     }
 
     #region "Unused interface members because this predictor doesn't process feedback"
