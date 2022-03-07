@@ -18,8 +18,6 @@ public partial class CompletionPredictor
 
     private long _lastHistoryId = -1;
 
-
-    private static readonly System.Diagnostics.Stopwatch _watch = new();
     private static readonly CmdletInfo s_getHistoryCommand = new("Get-History", typeof(GetHistoryCommand));
     private static readonly CmdletInfo s_getModuleCommand = new("Get-Module", typeof(GetModuleCommand));
     private static readonly CmdletInfo s_importModuleCommand = new("Import-Module", typeof(ImportModuleCommand));
@@ -52,8 +50,6 @@ public partial class CompletionPredictor
             return;
         }
 
-        _watch.Restart();
-
         // It's safe to get states of the PowerShell Runspace now because it's available and this event
         // is handled synchronously.
         // We may want to invoke command or script here, and we have to unregister ourself before doing
@@ -78,8 +74,6 @@ public partial class CompletionPredictor
             {
                 if (lastHistory.Id == _lastHistoryId)
                 {
-                    _watch.Stop();
-                    Console.WriteLine($"--- Early return: {_watch.ElapsedTicks} ticks");
                     return;
                 }
 
@@ -89,9 +83,6 @@ public partial class CompletionPredictor
             SyncCurrentPath(pwshRunspace);
             SyncVariables(pwshRunspace);
             SyncModules(ps);
-
-            _watch.Stop();
-            Console.WriteLine($"+++ Sync states: {_watch.ElapsedTicks} ticks");
         }
         finally
         {
