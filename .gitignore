@@ -8,33 +8,10 @@ project.lock.json
 /Packages/
 *.nuget.props
 
-# VS auto-generated solution files for project.json solutions
-*.xproj
-*.xproj.user
-*.suo
-
-# VS auto-generated files for csproj files
-*.csproj.user
-
-# Visual Studio IDE directory
-.vs/
-
 # VSCode directories that are not at the repository root
 /**/.vscode/
-
-# Project Rider IDE files
-.idea.powershell/
-
-# Ignore executables
-*.exe
-*.msi
-*.appx
-*.msix
 
 # Ignore binaries and symbols
 *.pdb
 *.dll
-
-# Per repo profile
-.profile.ps1
 
