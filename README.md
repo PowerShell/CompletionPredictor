@@ -7,3 +7,11 @@ It's a predictor plugin built on top of the [Subsystem Plugin Model](https://doc
 
 Make sure the [latest .NET 6 SDK](https://dotnet.microsoft.com/download/dotnet/6.0) is installed and available in your `PATH` environment variable.
 Run `.\build.ps1` from PowerShell to build the project. The module will be published to `.\bin\CompletionPredictor` by a successful build.
+
+## Use the predictor
+
+> NOTE: Make sure you use PowerShell 7.2 with PSReadLine 2.2.2.
+
+1. Import the module by `Import-Module .\bin\CompletionPredictor`.
+2. Enable prediction from the plugin source for PSReadLine: `Set-PSReadLineOption -PredictionSource Plugin`.
+3. Switch between the `Inline` and `List` prediction views, by pressing <kbd>F2</kbd>.
