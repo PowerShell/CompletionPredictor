@@ -19,7 +19,7 @@ stages:
 - stage: Build
   displayName: Build and Sign
   pool:
-    name: PowerShell1ES
+    name: 1ES
     demands:
     - ImageOverride -equals PSMMS2019-Secure
   jobs:
@@ -133,7 +133,7 @@ stages:
   displayName: Compliance
   dependsOn: Build
   pool:
-    name: PowerShell1ES
+    name: 1ES
     demands:
     - ImageOverride -equals PSMMS2019-Secure
   jobs:
