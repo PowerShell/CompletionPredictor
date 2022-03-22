@@ -45,10 +45,10 @@ stages:
         .\build.ps1 -Configuration Release
 
         # Set target folder paths
-        New-Item -Path .\bin\Release\NuGetPackage -ItemType Directory > $null
-        Send-VstsCommand "vso[task.setvariable variable=NuGetPackage]$(Build.SourcesDirectory)\CompletionPredictor\bin\Release\NuGetPackage"
-        Send-VstsCommand "vso[task.setvariable variable=Module]$(Build.SourcesDirectory)\CompletionPredictor\bin\Release\CompletionPredictor"
-        Send-VstsCommand "vso[task.setvariable variable=Signed]$(Build.SourcesDirectory)\CompletionPredictor\bin\Release\Signed"
+        New-Item -Path .\bin\NuGetPackage -ItemType Directory > $null
+        Send-VstsCommand "vso[task.setvariable variable=NuGetPackage]$(Build.SourcesDirectory)\CompletionPredictor\bin\NuGetPackage"
+        Send-VstsCommand "vso[task.setvariable variable=Module]$(Build.SourcesDirectory)\CompletionPredictor\bin\CompletionPredictor"
+        Send-VstsCommand "vso[task.setvariable variable=Signed]$(Build.SourcesDirectory)\CompletionPredictor\bin\Signed"
       displayName: Bootstrap & Build
 
     - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
