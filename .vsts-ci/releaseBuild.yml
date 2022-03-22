@@ -1,0 +1,189 @@
+name: CompletionPredictor-ModuleBuild-$(Build.BuildId)
+trigger: none
+pr: none
+
+variables:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  POWERSHELL_TELEMETRY_OPTOUT: 1
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  SBOMGenerator_Formats: 'spdx:2.2'
+
+resources:
+  repositories:
+  - repository: ComplianceRepo
+    type: github
+    endpoint: ComplianceGHRepo
+    name: PowerShell/compliance
+
+stages:
+- stage: Build
+  displayName: Build and Sign
+  pool:
+    name: PowerShell1ES
+    demands:
+    - ImageOverride -equals PSMMS2019-Secure
+  jobs:
+  - job: build_windows
+    displayName: Build CompletionPredictor
+    variables:
+    - group: ESRP
+
+    steps:
+
+    - checkout: self
+      clean: true
+      persistCredentials: true
+
+    - pwsh: |
+        function Send-VstsCommand ($vstsCommandString) {
+          Write-Host ("sending: " + $vstsCommandString)
+          Write-Host "##$vstsCommandString"
+        }
+        Write-Host "PS Version: $($($PSVersionTable.PSVersion))"
+        Set-Location -Path '$(Build.SourcesDirectory)\CompletionPredictor'
+        .\build.ps1 -Bootstrap
+        .\build.ps1 -Configuration Release
+
+        # Set target folder paths
+        New-Item -Path .\bin\Release\NuGetPackage -ItemType Directory > $null
+        Send-VstsCommand "vso[task.setvariable variable=NuGetPackage]$(Build.SourcesDirectory)\CompletionPredictor\bin\Release\NuGetPackage"
+        Send-VstsCommand "vso[task.setvariable variable=Module]$(Build.SourcesDirectory)\CompletionPredictor\bin\Release\CompletionPredictor"
+        Send-VstsCommand "vso[task.setvariable variable=Signed]$(Build.SourcesDirectory)\CompletionPredictor\bin\Release\Signed"
+      displayName: Bootstrap & Build
+
+    - task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
+      displayName: 'Component Governance Detection'
+      inputs:
+        sourceScanPath: '$(Build.SourcesDirectory)\CompletionPredictor'
+        snapshotForceEnabled: true
+        scanType: 'Register'
+        failOnAlert: true
+
+    - checkout: ComplianceRepo
+
+    # Sign the module files
+    - template: EsrpSign.yml@ComplianceRepo
+      parameters:
+        # the folder which contains the binaries to sign
+        buildOutputPath: $(Module)
+        # the location to put the signed output
+        signOutputPath: $(Signed)
+        # the certificate ID to use
+        certificateId: "CP-230012"
+        pattern: |
+          *.psd1
+          *.psm1
+          *.ps1
+          *.ps1xml
+          **\*.dll
+        useMinimatch: true
+
+    # Replace the *.psm1, *.ps1, *.psd1, *.dll files with the signed ones
+    - pwsh: |
+        # Show the signed files
+        Get-ChildItem -Path $(Signed)
+        Copy-Item -Path $(Signed)\* -Destination $(Module) -Recurse -Force
+      displayName: 'Replace unsigned files with signed ones'
+
+    # Verify the signatures
+    - pwsh: |
+        $HasInvalidFiles = $false
+        $WrongCert = @{}
+        Get-ChildItem -Path $(Module) -Recurse -Include "*.dll","*.ps*1*" | `
+            Get-AuthenticodeSignature | ForEach-Object {
+                $_ | Select-Object Path, Status
+                if ($_.Status -ne 'Valid') { $HasInvalidFiles = $true }
+                if ($_.SignerCertificate.Subject -notmatch 'CN=Microsoft Corporation.*') {
+                    $WrongCert.Add($_.Path, $_.SignerCertificate.Subject)
+                }
+            }
+
+        if ($HasInvalidFiles) { throw "Authenticode verification failed. There is one or more invalid files." }
+        if ($WrongCert.Count -gt 0) {
+            $WrongCert
+            throw "Certificate should have the subject starts with 'Microsoft Corporation'"
+        }
+      displayName: 'Verify the signed files'
+
+    # Generate a Software Bill of Materials (SBOM)
+    - template: Sbom.yml@ComplianceRepo
+      parameters:
+        BuildDropPath: '$(Module)'
+        Build_Repository_Uri: 'https://github.com/PowerShell/CompletionPredictor.git'
+        displayName: Generate SBOM
+
+    - pwsh: |
+        try {
+          $RepoName = "LocalRepo"
+          Register-PSRepository -Name $RepoName -SourceLocation $(NuGetPackage) -PublishLocation $(NuGetPackage) -InstallationPolicy Trusted
+          Publish-Module -Repository $RepoName -Path $(Module)
+        } finally {
+          Unregister-PSRepository -Name $RepoName -ErrorAction SilentlyContinue
+        }
+        Get-ChildItem -Path $(NuGetPackage)
+      displayName: 'Create the NuGet package'
+
+    - pwsh: |
+        Get-ChildItem -Path $(Module), $(NuGetPackage)
+        Write-Host "##vso[artifact.upload containerfolder=CompletionPredictor;artifactname=CompletionPredictor]$(Module)"
+        Write-Host "##vso[artifact.upload containerfolder=NuGetPackage;artifactname=NuGetPackage]$(NuGetPackage)"
+      displayName: 'Upload artifacts'
+
+- stage: compliance
+  displayName: Compliance
+  dependsOn: Build
+  pool:
+    name: PowerShell1ES
+    demands:
+    - ImageOverride -equals PSMMS2019-Secure
+  jobs:
+  - job: Compliance_Job
+    displayName: CompletionPredictor Compliance
+    variables:
+      - group: APIScan
+    # APIScan can take a long time
+    timeoutInMinutes: 240
+
+    steps:
+    - checkout: self
+    - checkout: ComplianceRepo
+    - download: current
+      artifact: CompletionPredictor
+
+    - pwsh: |
+        Get-ChildItem -Path "$(Pipeline.Workspace)\CompletionPredictor" -Recurse
+      displayName: Capture downloaded artifacts
+
+    - pwsh: |
+        function Send-VstsCommand ($vstsCommandString) {
+          Write-Host ("sending: " + $vstsCommandString)
+          Write-Host "##$vstsCommandString"
+        }
+
+        # Get module version
+        $psd1Data = Import-PowerShellDataFile -Path "$(Pipeline.Workspace)\CompletionPredictor\CompletionPredictor.psd1"
+        $moduleVersion = $psd1Data.ModuleVersion
+        $prerelease = $psd1Data.PrivateData.PSData.Prerelease
+        if ($prerelease) { $moduleVersion = "$moduleVersion-$prerelease" }
+        Send-VstsCommand "vso[task.setvariable variable=ModuleVersion]$moduleVersion"
+      displayName: Get Module Version
+
+    - template: assembly-module-compliance.yml@ComplianceRepo
+      parameters:
+        # binskim
+        AnalyzeTarget: '$(Pipeline.Workspace)\CompletionPredictor\*.dll'
+        AnalyzeSymPath: 'SRV*'
+        # component-governance
+        sourceScanPath: ''
+        # credscan
+        suppressionsFile: ''
+        # TermCheck
+        optionsRulesDBPath: ''
+        optionsFTPath: ''
+        # tsa-upload
+        codeBaseName: 'CompletionPredictor_201912'
+        # apiscan
+        softwareFolder: '$(Pipeline.Workspace)\CompletionPredictor'
+        softwareName: 'CompletionPredictor'
+        softwareVersion: '$(ModuleVersion)'
+        connectionString: 'RunAs=App;AppId=$(APIScanClient);TenantId=$(APIScanTenant);AppKey=$(APIScanSecret)'
