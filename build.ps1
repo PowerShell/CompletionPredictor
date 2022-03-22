@@ -1,3 +1,4 @@
+[CmdletBinding(DefaultParameterSetName = 'Build')]
 param(
     [Parameter(ParameterSetName = 'Build')]
     [ValidateSet('Debug', 'Release')]
@@ -16,6 +17,6 @@ if ($Bootstrap) {
 }
 
 $srcDir = Join-Path $PSScriptRoot 'src'
-dotnet publish $srcDir
+dotnet publish -c $Configuration $srcDir
 
 Write-Host "`nThe module 'CompleterPredictor' is published to 'bin\CompleterPredictor'`n" -ForegroundColor Green
