@@ -1,4 +1,4 @@
-$MinimalSDKVersion = '6.0.100'
+$MinimalSDKVersion = '6.0.201'
 $IsWindowsEnv = [System.Environment]::OSVersion.Platform -eq "Win32NT"
 $LocalDotnetDirPath = if ($IsWindowsEnv) { "$env:LocalAppData\Microsoft\dotnet" } else { "$env:HOME/.dotnet" }
 
