@@ -181,7 +181,7 @@ stages:
         optionsRulesDBPath: ''
         optionsFTPath: ''
         # tsa-upload
-        codeBaseName: 'CompletionPredictor_201912'
+        codeBaseName: 'CompletionPredictor_20220322'
         # apiscan
         softwareFolder: '$(Pipeline.Workspace)\CompletionPredictor'
         softwareName: 'CompletionPredictor'
