@@ -8,6 +8,8 @@
     Author = 'PowerShell'
     CompanyName = "Microsoft Corporation"
     Copyright = "Copyright (c) Microsoft Corporation."
+    Description = 'Command-line intellisense based on PowerShell auto-completion'
+    PowerShellVersion = '7.2'
 
     NestedModules = @('PowerShell.Predictor.dll')
     FunctionsToExport = @()
