@@ -12,6 +12,6 @@ Run `.\build.ps1` from PowerShell to build the project. The module will be publi
 
 > NOTE: Make sure you use PowerShell 7.2 with PSReadLine 2.2.2.
 
-1. Import the module by `Import-Module .\bin\CompletionPredictor`.
-2. Enable prediction from the plugin source for PSReadLine: `Set-PSReadLineOption -PredictionSource Plugin`.
-3. Switch between the `Inline` and `List` prediction views, by pressing <kbd>F2</kbd>.
+1. Install the module by `Install-Module -Name CompletionPredictor -Repository PSGallery`
+1. Enable prediction from the plugin source for PSReadLine: `Set-PSReadLineOption -PredictionSource HistoryAndPlugin`
+1. Switch between the `Inline` and `List` prediction views, by pressing <kbd>F2</kbd>
