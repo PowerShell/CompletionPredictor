@@ -12,4 +12,4 @@ Known limitations:
    - reusing tab completion results in certain cases, so further user input will be used to filter the existing tab completion results instead of always triggering new tab completion requests.
 1. Prediction on command arguments is currently disabled due to the same reason.
    - the default argument completion action is to enumerate file system items, which is slow in our current implementation. But this can be improved by special case the file system provider, so as to call .NET APIs directly when operating in the `FileSystemProvider`.
-   - some custom argument completers are slow, especially for those for native commands as they usually have to start an external process. This can potentially be improved by building index for common native commands.
+   - some custom argument completers are slow, especially those for native commands as they usually have to start an external process. This can potentially be improved by building index for common native commands.
