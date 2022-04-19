@@ -20,7 +20,7 @@ CompletionPredictor, you will need
 
 ## Completer documentation
 
-PowerShell predictors are written in C# and register with the PowerShell Subsystem Plugin Model.  To learn more, see [how to create a command line predictor]( https://docs.microsoft.com/en-us/powershell/scripting/dev-cross-plat/create-cmdline-predictor?view=powershell-7.2)
+PowerShell predictors are written in C# and register with the PowerShell Subsystem Plugin Model.  To learn more, see [how to create a command line predictor]( https://docs.microsoft.com/powershell/scripting/dev-cross-plat/create-cmdline-predictor)
 
 ## Build
 
