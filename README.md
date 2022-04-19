@@ -3,7 +3,7 @@
 The `CompletionPredictor` is a PowerShell command line auto-completion plugin for the PSReadLine feature
 [predictive intellisense](https://devblogs.microsoft.com/powershell/announcing-psreadline-2-1-with-predictive-intellisense/)
 
-![CompletionPRedictor](.\media\CompletionPredictor.png)
+![CompletionPRedictor](./media/CompletionPredictor.png)
 
 We welcome your feedback and suggestions. Please file issues and pull requests in this repository.
 
