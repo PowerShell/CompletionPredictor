@@ -10,10 +10,10 @@ We welcome your feedback and suggestions. Please file issues and pull requests i
 ## Requirements
 
 The CompletionPredictor plugin is built on the
-[Subsystem Plugin Model](https://docs.microsoft.com/powershell/scripting/learn/experimental-features#pssubsystempluginmodel)
+[Subsystem Plugin Model](https://docs.microsoft.com/powershell/scripting/learn/experimental-features#pssubsystempluginmodel),
 which is available with PowerShell 7.2 or above. To display prediction suggestions from the
 CompletionPredictor, you will need
-[PSReadLine 2.2.2](https://www.powershellgallery.com/packages/PSReadLine/2.2.2)
+[PSReadLine 2.2.2](https://www.powershellgallery.com/packages/PSReadLine/2.2.2).
 
 - PowerShell 7.2 or above
 - PSReadLine 2.2.2 or above
