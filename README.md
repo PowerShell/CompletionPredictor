@@ -5,6 +5,8 @@ The `CompletionPredictor` is a PowerShell command line auto-completion plugin fo
 
 ![CompletionPredictor](./tools/images/CompletionPredictor.gif)
 
+This predictor is relatively simple and also serves as an example for you to build your own predictor.
+
 We welcome your feedback and suggestions. Please file issues and submit pull requests in this repository.
 
 ## Requirements
