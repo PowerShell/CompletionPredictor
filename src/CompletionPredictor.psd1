@@ -16,4 +16,11 @@
     CmdletsToExport = @()
     VariablesToExport = '*'
     AliasesToExport = @()
+
+    PrivateData = @{
+        PSData = @{
+            Tags = @('PSEdition_Core')
+            ProjectUri = 'https://github.com/PowerShell/CompletionPredictor'
+        }
+    }
 }
