@@ -26,6 +26,7 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
     {
         _guid = new Guid(guid);
         _runspace = RunspaceFactory.CreateRunspace(InitialSessionState.CreateDefault());
+        _runspace.Name = nameof(CompletionPredictor);
         _runspace.Open();
 
         PopulateInitialState();
