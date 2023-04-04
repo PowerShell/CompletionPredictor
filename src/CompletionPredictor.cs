@@ -19,7 +19,8 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
         "ForEach-Object",
         "?",
         "where",
-        "Where-Object"
+        "Where-Object",
+        "cd",
     };
 
     internal CompletionPredictor(string guid)
@@ -62,33 +63,59 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
             return default;
         }
 
+        return GetFromTabCompletion(context, cancellationToken);
+    }
+
+    private SuggestionPackage GetFromTabCompletion(PredictionContext context, CancellationToken cancellationToken)
+    {
         // Call into PowerShell tab completion to get completion results.
         // The runspace may be held by another call, or the call may take too long and exceed the timeout.
         CommandCompletion? result = GetCompletionResults(context.InputAst, context.InputTokens, context.CursorPosition);
-        if (result is null || cancellationToken.IsCancellationRequested)
+        if (result is null || result.CompletionMatches.Count == 0 || cancellationToken.IsCancellationRequested)
         {
             return default;
         }
 
-        int count = result.CompletionMatches.Count;
-        if (count > 0)
+        int count = result.CompletionMatches.Count > 30 ? 30 : result.CompletionMatches.Count;
+        List<PredictiveSuggestion>? list = null;
+
+        int replaceIndex = result.ReplacementIndex;
+        string input = context.InputAst.Extent.Text;
+
+        ReadOnlySpan<char> head = replaceIndex == 0 ? ReadOnlySpan<char>.Empty : input.AsSpan(0, replaceIndex);
+        ReadOnlySpan<char> diff = input.AsSpan(replaceIndex);
+
+        for (int i = 0; i < count; i++)
         {
-            count = count > 10 ? 10 : count;
-            var list = new List<PredictiveSuggestion>(count);
+            CompletionResult completion = result.CompletionMatches[i];
+            ReadOnlySpan<char> text = completion.CompletionText.AsSpan();
+            string? suggestion = null;
 
-            string input = context.InputAst.Extent.Text;
-            var head = result.ReplacementIndex == 0 ? ReadOnlySpan<char>.Empty : input.AsSpan(0, result.ReplacementIndex);
-
-            for (int i = 0; i < count; i++)
+            switch (completion.ResultType)
             {
-                var completion = result.CompletionMatches[i];
-                list.Add(new PredictiveSuggestion(string.Concat(head, completion.CompletionText), completion.ToolTip));
+                case CompletionResultType.ProviderItem or CompletionResultType.ProviderContainer when !diff.IsEmpty:
+                    // For local paths, if the input doesn't contain the prefix, then we stripe it from the suggestion.
+                    bool removeLocalPathPrefix =
+                        text.IndexOf(diff, StringComparison.OrdinalIgnoreCase) == 2 &&
+                        text[0] == '.' && text[1] == Path.DirectorySeparatorChar;
+                    ReadOnlySpan<char> newPart = removeLocalPathPrefix ? text.Slice(2) : text;
+                    suggestion = string.Concat(head, newPart);
+
+                    break;
+
+                default:
+                    break;
             }
 
-            return new SuggestionPackage(list);
+            suggestion ??= string.Concat(head, text);
+            if (!string.Equals(input, suggestion, StringComparison.OrdinalIgnoreCase))
+            {
+                list ??= new List<PredictiveSuggestion>(count);
+                list.Add(new PredictiveSuggestion(suggestion, completion.ToolTip));
+            }
         }
 
-        return default;
+        return list is null ? default : new SuggestionPackage(list);
     }
 
     private CommandCompletion? GetCompletionResults(Ast inputAst, IReadOnlyCollection<Token> inputTokens, IScriptPosition cursorPosition)
