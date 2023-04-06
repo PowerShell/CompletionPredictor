@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Management.Automation.Language;
 using System.Management.Automation.Runspaces;
 using System.Management.Automation.Subsystem.Prediction;
@@ -10,6 +11,8 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
 {
     private readonly Guid _guid;
     private readonly Runspace _runspace;
+    private readonly GitHandler _gitHandler;
+    private string? _currentLocation;
     private int _lock = 1;
 
     private static HashSet<string> s_cmdList = new(StringComparer.OrdinalIgnoreCase)
@@ -21,11 +24,13 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
         "where",
         "Where-Object",
         "cd",
+        "git",
     };
 
     internal CompletionPredictor(string guid)
     {
         _guid = new Guid(guid);
+        _gitHandler = new GitHandler();
         _runspace = RunspaceFactory.CreateRunspace(InitialSessionState.CreateDefault());
         _runspace.Name = nameof(CompletionPredictor);
         _runspace.Open();
@@ -47,23 +52,63 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
         {
             // When it ends at a white space, it would likely trigger argument completion which in most cases would be file-operation
             // intensive. That's not only slow but also undesirable in most cases, so we skip it.
-            // But, there are exceptions for 'ForEach-Object' and 'Where-Object', where completion on member names is quite useful.
-            Ast lastAst = relatedAsts[^1];
-            var cmdName = (lastAst.Parent as CommandAst)?.CommandElements[0] as StringConstantExpressionAst;
-            if (cmdName is null || !s_cmdList.Contains(cmdName.Value) || !object.ReferenceEquals(lastAst, cmdName))
+            // But, there are exceptions for some commands, where completion on member names is quite useful.
+            if (!IsCommandAstWithLiteralName(context, out var cmdAst, out var nameAst)
+                || !s_cmdList.TryGetValue(nameAst.Value, out string? cmd))
             {
-                // So we stop processing unless the cursor is right after 'ForEach-Object' or 'Where-Object'.
+                // Stop processing if the cursor is not at the end of an allowed command.
+                return default;
+            }
+
+            if (cmd is "git")
+            {
+                // Process 'git' command.
+                return _gitHandler.GetGitResult(
+                    cmdAst,
+                    _currentLocation,
+                    wordToComplete: string.Empty,
+                    context.InputAst.Extent.Text,
+                    cancellationToken);
+            }
+
+            if (cmdAst.CommandElements.Count != 1)
+            {
+                // For commands other than 'git', we only do argument completion if the cursor is right after the command name.
                 return default;
             }
         }
-
-        if (tokenAtCursor is not null && tokenAtCursor.TokenFlags.HasFlag(TokenFlags.CommandName))
+        else
         {
-            // When it's a command, it would likely take too much time because the command discovery is usually expensive, so we skip it.
-            return default;
+            if (tokenAtCursor.TokenFlags.HasFlag(TokenFlags.CommandName))
+            {
+                // When it's a command, it would likely take too much time because the command discovery is usually expensive, so we skip it.
+                return default;
+            }
+
+            if (IsCommandAstWithLiteralName(context, out var cmdAst, out var nameAst)
+                && string.Equals(nameAst.Value, "git", StringComparison.OrdinalIgnoreCase))
+            {
+                return _gitHandler.GetGitResult(
+                    cmdAst,
+                    _currentLocation,
+                    tokenAtCursor.Text,
+                    context.InputAst.Extent.Text,
+                    cancellationToken);
+            }
         }
 
         return GetFromTabCompletion(context, cancellationToken);
+    }
+
+    private bool IsCommandAstWithLiteralName(
+        PredictionContext context,
+        [NotNullWhen(true)] out CommandAst? cmdAst,
+        [NotNullWhen(true)] out StringConstantExpressionAst? nameAst)
+    {
+        Ast lastAst = context.RelatedAsts[^1];
+        cmdAst = lastAst.Parent as CommandAst;
+        nameAst = cmdAst?.CommandElements[0] as StringConstantExpressionAst;
+        return nameAst is not null;
     }
 
     private SuggestionPackage GetFromTabCompletion(PredictionContext context, CancellationToken cancellationToken)
