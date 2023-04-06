@@ -2,9 +2,9 @@ namespace Microsoft.PowerShell.Predictor;
 
 delegate List<string>? ArgPredictor(int pos, string filter, RepoInfo repoInfo);
 
-internal sealed class GitNode2
+internal sealed class GitNode
 {
-    internal GitNode2(string name, ArgPredictor? predictArg)
+    internal GitNode(string name, ArgPredictor? predictArg)
     {
         Name = name;
         PredictArg = predictArg;
@@ -13,52 +13,15 @@ internal sealed class GitNode2
     internal readonly string Name;
     internal readonly ArgPredictor? PredictArg;
 
-    internal static Dictionary<string, GitNode2> InitGitNodes()
+    internal static Dictionary<string, GitNode> InitGitNodes()
     {
-        GitFlag common_force = ShortAndLong("f", "force");
-
         return new(StringComparer.Ordinal) {
             {
                 "merge", new(
                     name: "merge",
-                    flags: new()
-                    {
-                        Short(1, "n"),
-
-                        Long(1, "stat"),
-                        Long(1, "no-commit"),
-                        Long(1, "squash"),
-                        Long(1, "no-edit"),                        
-                        Long(1, "no-verify"),
-                        Long(1, "no-ff"),
-                        Long(1, "ff-only"),
-                        Long(1, "allow-unrelated-histories"),
-                        Long(1, "no-allow-unrelated-histories"),
-                        Long(1, "rerere-autoupdate"),
-                        Long(1, "no-rerere-autoupdate"),
-                        Long(1, "verify-signatures"),
-                        Long(1, "into-name", expectArg: true),
-                        Long(1, "progress"),
-                        Long(1, "autostash"),
-                        Long(1, "overwrite-ignore"),
-                        Long(1, "signoff"),
-
-                        ShortAndLong(1, "e", "edit"),
-                        ShortAndLong(1, "s", "strategy=", new List<string>() { "ort", "recursive", "resolve", "octopus", "ours", "subtree" }),
-                        ShortAndLong(1, "X", "strategy-option=", expectArg: true),
-                        ShortAndLong(1, "S", "gpg-sign=", expectArg: true),
-                        ShortAndLong(1, "m", "message", expectArg: true),
-                        ShortAndLong(1, "F", "file=", expectArg: true),
-                        ShortAndLong(1, "v", "verbose"),
-                        ShortAndLong(1, "q", "quiet"),
-
-                        Long(2, "abort"),
-                        Long(2, "quit"),
-                        Long(2, "continue"),
-                    },
-
-                    (int set, int pos, string filter, RepoInfo repoInfo) => {
-                        if (set is not 1 || pos is not 0)
+                    // 
+                    (int pos, string filter, RepoInfo repoInfo) => {
+                        if (pos is not 0)
                         {
                             return null;
                         }
@@ -155,55 +118,7 @@ internal sealed class GitNode2
             {
                 "branch", new(
                     name: "branch",
-                    flags: new()
-                    {
-                        ShortAndLong(-1, "v", "verbose"),
-                        ShortAndLong(-1, "q", "quiet"),
-
-                        Long(1, "color=", new List<string>() { "auto", "never", "always " }),
-                        Long(1, "no-color"),
-                        Long(1, "show-current"),
-                        Long(1, "abbrev=", expectArg: true),
-                        Long(1, "no-abbrev"),
-                        Long(1, "column=", expectArg: true),
-                        Long(1, "no-column"),
-                        Long(1, "sort=", expectArg: true),
-                        Long(1, "merged", expectArg: true),
-                        Long(1, "no-merged", expectArg: true),
-                        Long(1, "contains", expectArg: true),
-                        Long(1, "no-contains", expectArg: true),
-                        Long(1, "points-at", expectArg: true),
-                        Long(1, "format=", expectArg: true),
-                        ShortAndLong(1, "r", "remotes"),
-                        ShortAndLong(1, "a", "all"),
-
-                        ShortAndLong("t", "track=", new List<string>() { "direct", "inherit" }),
-                        ShortAndLong("u", "set-upstream-to=", expectArg: true),
-                        Long("unset-upstream"),
-                        
-                        
-                        
-                        
-                        common_all,
-                        ShortAndLong("d", "delete"),
-                        Short("D"),
-                        ShortAndLong("m", "move"),
-                        Short("M"),
-                        ShortAndLong("c", "copy"),
-                        Short("C"),
-                        ShortAndLong("l", "list"),
-                        
-                        Long("create-reflog"),
-                        Long("edit-description"),
-                        common_force,
-                        
-                        
-                        
-                        
-                        ShortAndLong("i", "ignore-case"),
-                        
-                    },
-                    (int set, int pos, string filter, RepoInfo repoInfo) => {
+                    (int pos, string filter, RepoInfo repoInfo) => {
                         if (pos is not 0)
                         {
                             return null;
@@ -257,6 +172,12 @@ internal sealed class GitNode2
                     }
                 )
             },
+            {
+                "checkout", new(
+                    name: "checkout",
+
+                )
+            }
         };
     }
 }
