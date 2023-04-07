@@ -133,8 +133,9 @@ internal class RepoInfo
     private (string, DateTime) GetActiveBranch()
     {
         var head = new FileInfo(_head);
-        string content = File.ReadAllText(head.FullName);
-        return (content.Substring(content.LastIndexOf('/') + 1), head.LastWriteTimeUtc);
+        using var reader = head.OpenText();
+        string content = reader.ReadLine()!;
+        return (content.Substring("ref: refs/heads/".Length), head.LastWriteTimeUtc);
     }
 
     private (List<string>, DateTime) GetBranches()
@@ -144,11 +145,7 @@ internal class RepoInfo
 
         if (dirInfo.Exists)
         {
-            foreach (FileInfo file in dirInfo.EnumerateFiles())
-            {
-                ret.Add(file.Name);
-            }
-
+            RemoteInfo.ReadBranches(dirInfo, ret);
             return (ret, dirInfo.LastWriteTimeUtc);
         }
 
@@ -176,7 +173,8 @@ internal class RepoInfo
 
 internal class RemoteInfo
 {
-    private static readonly bool IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    private static readonly bool s_isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+    private static readonly EnumerationOptions s_enumOption = new() { RecurseSubdirectories = true, IgnoreInaccessible = true, };
 
     private readonly object _syncObj;
     private readonly string _path;
@@ -209,6 +207,27 @@ internal class RemoteInfo
         _checkForUpdate = true;
     }
 
+    internal static void ReadBranches(DirectoryInfo dirInfo, List<string> branches)
+    {
+        foreach (FileInfo file in dirInfo.EnumerateFiles("*", s_enumOption))
+        {
+            string name = Path.GetRelativePath(dirInfo.FullName, file.FullName);
+            if (name == "HEAD")
+            {
+                using var reader = file.OpenText();
+                string? content = reader.ReadLine();
+                if (string.IsNullOrEmpty(content))
+                {
+                    continue;
+                }
+
+                name = content.Substring("ref: refs/remotes/".Length + dirInfo.Name.Length + 1);
+            }
+
+            branches.Add(s_isWindows ? name.Replace('\\', '/') : name);
+        }
+    }
+
     private void Refresh()
     {
         if (ShouldUpdate())
@@ -225,19 +244,12 @@ internal class RemoteInfo
                     };
 
                     var branches = new List<string>();
-                    foreach (FileInfo file in dirInfo.EnumerateFiles("*", option))
-                    {
-                        string name = Path.GetRelativePath(file.FullName, _path);
-                        if (name == "HEAD")
-                        {
-                            continue;
-                        }
-                        branches.Add(IsWindows ? name.Replace('\\', '/') : name);
-                    }
+                    ReadBranches(dirInfo, branches);
 
                     // Reference assignment is an atomic operation.
                     _branches = branches;
                     _checkForUpdate = false;
+                    _lastWrittenTimeUtc = dirInfo.LastWriteTimeUtc;
                 }
             }
         }

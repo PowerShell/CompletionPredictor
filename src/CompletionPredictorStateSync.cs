@@ -149,7 +149,7 @@ public partial class CompletionPredictor
     {
         PathInfo currentPath = source.SessionStateProxy.Path.CurrentLocation;
         _runspace.SessionStateProxy.Path.SetLocation(currentPath.Path);
-        _currentLocation = source.SessionStateProxy.Path.CurrentFileSystemLocation.ProviderPath;
+        _cwd = source.SessionStateProxy.Path.CurrentFileSystemLocation.ProviderPath;
     }
 
     private void SyncVariables(Runspace source)

@@ -1,112 +1,128 @@
 using System.Collections.Concurrent;
+using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Management.Automation.Language;
 using System.Management.Automation.Subsystem.Prediction;
 
 namespace Microsoft.PowerShell.Predictor;
 
-internal record GitContext(CommandAst GitCmd, string? WordToComplete, string Input, RepoInfo RepoInfo);
-
 internal partial class GitHandler
 {
     private readonly ConcurrentDictionary<string, RepoInfo> _repos;
-    private readonly ConcurrentDictionary<string, GitNode> _cmds;
+    private readonly Dictionary<string, GitNode> _gitCmds;
 
     internal GitHandler()
     {
-        _repos = new ConcurrentDictionary<string, RepoInfo>(StringComparer.Ordinal);
+        _repos = new(StringComparer.Ordinal);
+        _gitCmds = new(StringComparer.Ordinal)
+        {
+            { "merge", new Merge() },
+            { "branch", new Branch() },
+            { "checkout", new Checkout() },
+            { "push", new Push() },
+        };
     }
 
-    internal SuggestionPackage GetGitResult(
-        CommandAst gitCmd,
-        string? currentLocation,
-        string wordToComplete,
-        string input,
-        CancellationToken token)
+    internal void SignalCheckForRepoUpdate()
     {
-        if (gitCmd.CommandElements.Count is 1)
+        foreach (var repoInfo in _repos.Values)
         {
-            return CompleteOnSubCommand(wordToComplete, input);
+            repoInfo.NeedCheckForUpdate();
         }
+    }
 
-        if (currentLocation is null || gitCmd.CommandElements.Count is 1 ||
-            gitCmd.CommandElements[1] is not StringConstantExpressionAst subCommand)
+    internal SuggestionPackage GetGitResult(CommandAst gitAst, string? cwd, PredictionContext context, CancellationToken token)
+    {
+        var elements = gitAst.CommandElements;
+        if (cwd is null || elements.Count is 1 || !TryConvertToText(elements, out List<string>? textElements))
         {
             return default;
         }
 
-        string? repoRoot = null;
-        RepoInfo? repoInfo = null;
-
-        foreach (var pair in _repos)
+        RepoInfo? repoInfo = GetRepoInfo(cwd);
+        if (repoInfo is null || token.IsCancellationRequested)
         {
-            string root = pair.Key;
-            if (currentLocation.StartsWith(root, StringComparison.Ordinal) &&
-                (currentLocation.Length == root.Length || currentLocation[root.Length] == Path.DirectorySeparatorChar))
+            return default;
+        }
+
+        string gitCmd = textElements[1];
+        string? textAtCursor = context.TokenAtCursor?.Text;
+        bool cursorAtGitCmd = textElements.Count is 2 && textAtCursor is not null;
+
+        if (!_gitCmds.TryGetValue(gitCmd, out GitNode? node))
+        {
+            if (cursorAtGitCmd)
             {
-                repoRoot = root;
-                repoInfo = pair.Value;
+                foreach (var entry in _gitCmds)
+                {
+                    if (entry.Key.StartsWith(textAtCursor!))
+                    {
+                        node = entry.Value;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (node is not null)
+        {
+            return node.Predict(textElements, textAtCursor, context.InputAst.Extent.Text, repoInfo, cursorAtGitCmd);
+        }
+
+        return default;
+    }
+
+    private bool TryConvertToText(
+        ReadOnlyCollection<CommandElementAst> elements,
+        [NotNullWhen(true)] out List<string>? textElements)
+    {
+        textElements = new(elements.Count);
+        foreach (var e in elements)
+        {
+            switch (e)
+            {
+                case StringConstantExpressionAst str:
+                    textElements.Add(str.Value);
+                    break;
+                case CommandParameterAst param:
+                    textElements.Add(param.Extent.Text);
+                    break;
+                default:
+                    textElements = null;
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    private RepoInfo? GetRepoInfo(string cwd)
+    {
+        if (_repos.TryGetValue(cwd, out RepoInfo? repoInfo))
+        {
+            return repoInfo;
+        }
+
+        foreach (var entry in _repos)
+        {
+            string root = entry.Key;
+            if (cwd.StartsWith(root) && cwd[root.Length] == Path.DirectorySeparatorChar)
+            {
+                repoInfo = entry.Value;
                 break;
             }
         }
 
         if (repoInfo is null)
         {
-            repoRoot = FindRepoRoot(currentLocation);
-            if (repoRoot is null)
+            string? repoRoot = FindRepoRoot(cwd);
+            if (repoRoot is not null)
             {
-                // It's not in a git repo.
-                return default;
+                repoInfo = _repos.GetOrAdd(repoRoot, new RepoInfo(repoRoot));
             }
-
-            repoInfo = _repos.GetOrAdd(repoRoot, new RepoInfo(repoRoot));
         }
 
-        if (token.IsCancellationRequested)
-        {
-            return default;
-        }
-
-        GitContext gitContext = new(gitCmd, wordToComplete, input, repoInfo);
-        return subCommand.Value.ToLower() switch
-        {
-            "checkout" => HandleCheckout(gitContext),
-            "branch"   => HandleBranch(gitContext),
-            "rebase"   => HandleRebase(gitContext),
-            "merge"    => HandleMerge(gitContext),
-            "push"     => HandlePush(gitContext),
-            "reset"    => HandleReset(gitContext),
-            _ => default,
-        };
-    }
-
-    private SuggestionPackage HandleCheckout(GitContext context)
-    {
-        return default;
-    }
-
-    private SuggestionPackage HandleBranch(GitContext context)
-    {
-        return default;
-    }
-
-    private SuggestionPackage HandleRebase(GitContext context)
-    {
-        return default;
-    }
-
-    private SuggestionPackage HandleMerge(GitContext context)
-    {
-        return default;
-    }
-
-    private SuggestionPackage HandlePush(GitContext context)
-    {
-        return default;
-    }
-
-    private SuggestionPackage HandleReset(GitContext context)
-    {
-        return default;
+        return repoInfo;
     }
 
     private string? FindRepoRoot(string currentLocation)

@@ -12,7 +12,7 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
     private readonly Guid _guid;
     private readonly Runspace _runspace;
     private readonly GitHandler _gitHandler;
-    private string? _currentLocation;
+    private string? _cwd;
     private int _lock = 1;
 
     private static HashSet<string> s_cmdList = new(StringComparer.OrdinalIgnoreCase)
@@ -63,12 +63,7 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
             if (cmd is "git")
             {
                 // Process 'git' command.
-                return _gitHandler.GetGitResult(
-                    cmdAst,
-                    _currentLocation,
-                    wordToComplete: string.Empty,
-                    context.InputAst.Extent.Text,
-                    cancellationToken);
+                return _gitHandler.GetGitResult(cmdAst, _cwd, context, cancellationToken);
             }
 
             if (cmdAst.CommandElements.Count != 1)
@@ -88,12 +83,7 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
             if (IsCommandAstWithLiteralName(context, out var cmdAst, out var nameAst)
                 && string.Equals(nameAst.Value, "git", StringComparison.OrdinalIgnoreCase))
             {
-                return _gitHandler.GetGitResult(
-                    cmdAst,
-                    _currentLocation,
-                    tokenAtCursor.Text,
-                    context.InputAst.Extent.Text,
-                    cancellationToken);
+                return _gitHandler.GetGitResult(cmdAst, _cwd, context, cancellationToken);
             }
         }
 
@@ -200,11 +190,18 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
 
     #region "Unused interface members because this predictor doesn't process feedback"
 
-    public bool CanAcceptFeedback(PredictionClient client, PredictorFeedbackKind feedback) => false;
+    public bool CanAcceptFeedback(PredictionClient client, PredictorFeedbackKind feedback)
+    {
+        return feedback == PredictorFeedbackKind.CommandLineAccepted ? true : false;
+    }
+
     public void OnSuggestionDisplayed(PredictionClient client, uint session, int countOrIndex) { }
     public void OnSuggestionAccepted(PredictionClient client, uint session, string acceptedSuggestion) { }
-    public void OnCommandLineAccepted(PredictionClient client, IReadOnlyList<string> history) { }
     public void OnCommandLineExecuted(PredictionClient client, string commandLine, bool success) { }
+    public void OnCommandLineAccepted(PredictionClient client, IReadOnlyList<string> history)
+    {
+        _gitHandler.SignalCheckForRepoUpdate();
+    }
 
     #endregion;
 }
