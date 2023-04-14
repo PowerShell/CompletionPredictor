@@ -269,6 +269,9 @@ internal sealed class Branch : GitNode
             }
         }
 
+        string activeBranch = repoInfo.ActiveBranch;
+        string defaultBranch = repoInfo.DefaultBranch;
+
         if (originBranches is not null)
         {
             // The 'origin' remote exists, so do a smart check to find those local branches
@@ -281,7 +284,7 @@ internal sealed class Branch : GitNode
                 foreach (string branch in localBranches)
                 {
                     if (branch.StartsWith(filter, StringComparison.Ordinal) &&
-                        branch != repoInfo.ActiveBranch)
+                        branch != activeBranch)
                     {
                         ret ??= new List<string>();
                         ret.Add(branch);
@@ -296,8 +299,8 @@ internal sealed class Branch : GitNode
             foreach (string branch in repoInfo.Branches)
             {
                 if (branch.StartsWith(filter, StringComparison.Ordinal) &&
-                    branch != repoInfo.ActiveBranch &&
-                    branch != repoInfo.DefaultBranch)
+                    branch != activeBranch &&
+                    branch != defaultBranch)
                 {
                     ret ??= new List<string>();
                     ret.Add(branch);
@@ -385,10 +388,11 @@ internal sealed class Checkout : GitNode
     private List<string>? PredictArgument(string filter, RepoInfo repoInfo, bool excludeActiveBranch)
     {
         List<string>? ret = null;
+        string activeBranch = repoInfo.ActiveBranch;
 
         foreach (string localBranch in repoInfo.Branches)
         {
-            if (excludeActiveBranch && localBranch == repoInfo.ActiveBranch)
+            if (excludeActiveBranch && localBranch == activeBranch)
             {
                 continue;
             }
@@ -428,7 +432,7 @@ internal sealed class Push : GitNode
 
         if (textAtCursor is not null && textAtCursor.StartsWith('-'))
         {
-            const string forceWithLease = "--force-with-lease ";
+            const string forceWithLease = "--force-with-lease";
             if (forceWithLease.StartsWith(textAtCursor, StringComparison.Ordinal))
             {
                 hasAutoFill = true;
