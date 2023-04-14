@@ -75,7 +75,12 @@ internal class RepoInfo
     internal void NeedCheckForUpdate()
     {
         _checkForUpdate = true;
-        foreach (var remote in _remotes!)
+        if (_remotes is null)
+        {
+            return;
+        }
+
+        foreach (var remote in _remotes)
         {
             remote.NeedCheckForUpdate();
         }
