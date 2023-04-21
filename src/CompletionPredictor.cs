@@ -124,6 +124,7 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
         {
             CompletionResult completion = result.CompletionMatches[i];
             ReadOnlySpan<char> text = completion.CompletionText.AsSpan();
+            string? tooltip = completion.CompletionText == completion.ToolTip ? null : completion.ToolTip;
             string? suggestion = null;
 
             switch (completion.ResultType)
@@ -146,7 +147,7 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
             if (!string.Equals(input, suggestion, StringComparison.OrdinalIgnoreCase))
             {
                 list ??= new List<PredictiveSuggestion>(count);
-                list.Add(new PredictiveSuggestion(suggestion, completion.ToolTip));
+                list.Add(new PredictiveSuggestion(suggestion, tooltip));
             }
         }
 
