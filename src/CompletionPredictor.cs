@@ -17,13 +17,9 @@ public partial class CompletionPredictor : ICommandPredictor, IDisposable
 
     private static HashSet<string> s_cmdList = new(StringComparer.OrdinalIgnoreCase)
     {
-        "%",
-        "foreach",
-        "ForEach-Object",
-        "?",
-        "where",
-        "Where-Object",
-        "cd",
+        "%", "foreach", "ForEach-Object",
+        "?", "where", "Where-Object",
+        "cd", "dir",
         "git",
     };
 
