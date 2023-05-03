@@ -1,5 +1,17 @@
 # Changelog
 
+### [0.1.1] - 2023-05-03
+
+- Set `tooltip` only if it's different from the completion text (#26)
+- Move the git handler into its own folder (#25)
+- Make ad-hoc fixes for issues found out while using the module (#23)
+- Add argument prediction for some basic git command (#21)
+- Allow argument completion on `cd` and `dir` (#20, #27)
+- Set the predictor Runspace name (#16) (Thanks @ThomasNieto!)
+- Update .psd1 file to include the project uri (#18)
+
+[0.1.1]: https://github.com/PowerShell/PSReadLine/compare/v0.1.0...v0.1.1
+
 ## [0.1.0] - 2022-04-06
 
 Initial release of the `CompletionPredictor` module:
