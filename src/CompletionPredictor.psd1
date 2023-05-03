@@ -3,7 +3,7 @@
 #
 
 @{
-    ModuleVersion = '0.1.0'
+    ModuleVersion = '0.1.1'
     GUID = 'dab36133-7065-440d-ac9a-821187afc400'
     Author = 'PowerShell'
     CompanyName = "Microsoft Corporation"
