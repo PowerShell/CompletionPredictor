@@ -1,5 +1,7 @@
 # CompletionPredictor
 
+> **NOTE:** This is an experimental project with no target date for a 1.0 release.
+
 The `CompletionPredictor` is a PowerShell command line auto-completion plugin for the PSReadLine
 [Predictive Intellisense](https://devblogs.microsoft.com/powershell/announcing-psreadline-2-1-with-predictive-intellisense/) feature:
 
