@@ -43,3 +43,11 @@ The module will be published to `.\bin\CompletionPredictor` by a successful buil
 1. Switch between the `Inline` and `List` prediction views, by pressing <kbd>F2</kbd>
 
 [subsystem-plugin-model]: https://docs.microsoft.com/powershell/scripting/learn/experimental-features#pssubsystempluginmodel
+
+## Code of Conduct
+
+Please see our [Code of Conduct](.github/CODE_OF_CONDUCT.md) before participating in this project.
+
+## Security Policy
+
+For any security issues, please see our [Security Policy](.github/SECURITY.md).
